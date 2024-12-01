@@ -16,10 +16,22 @@ namespace CleanDisk
         static string virusDirectoryPath = $"C:\\Users\\{user}\\AppData\\Roaming\\WindowsServices";
         static string roamingPath = $"C:\\Users\\{user}\\AppData\\Roaming\\";
         static string path;
+        static DriveInfo[] disks = DriveInfo.GetDrives();
+
+        static void ProcessToWork(string arguments)
+        {
+            Process process = new Process();
+            process.StartInfo = new ProcessStartInfo();
+            process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            process.StartInfo.FileName = "cmd.exe";
+            process.StartInfo.Arguments = arguments;
+            process.Start();
+        }
+
+
         //C:\Users\Kotello\AppData\Roaming
         static void Main(string[] args)
         {
-
             Unhide(user);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Всё проверено и сделано успешно!");
@@ -32,18 +44,14 @@ namespace CleanDisk
 
         static void Unhide(string user)
         {
-            Process process = new Process();
-            process.StartInfo = new ProcessStartInfo();
-            process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-            process.StartInfo.FileName = "cmd.exe";
-            process.StartInfo.Arguments = $"/c cd {roamingPath} & attrib -r -a -s -h /d /s";
+
             if (!Directory.Exists(roamingPath))
                 Console.WriteLine(false);
             else
-                process.Start();
+                ProcessToWork($"/c cd {roamingPath} & attrib -r -a -s -h /d /s");
             DeletingVirus(user);
             DeletingVirusFromFlash();
-            GetFilesBack(path);
+            
         }
 
 
@@ -73,62 +81,75 @@ namespace CleanDisk
             }
             else
                 Console.WriteLine("На компьютере нету вируса");
-
+           
         }
+
         static void DeletingVirusFromFlash()
         {
-        Link:
-            Console.WriteLine("Укажите путь к флешке(пример E)");
-            path = Console.ReadLine() + ":";
-            string virusFlashPath = $"{path}\\WindowsServices";
-        Link2:
-            if (Directory.Exists(path))
+            string[] disk_letter = disks.Select(x => x.IsReady && x.DriveType == DriveType.Removable ? x.Name.Substring(0, 2) : null).SkipWhile(x => x == null).ToArray();
+            foreach (var flash in disk_letter)
             {
-                Process.Start("cmd.exe", $"/c {path} && attrib -r -a -s -h /d /s");
-
-                if (Directory.Exists($"{virusFlashPath}"))
+            Link:
+                //Console.WriteLine("Укажите путь к флешке(пример E)");
+                path = flash;//H + ":";
+                string virusFlashPath = $"{path}WindowsServices";
+            Link2:
+                if (Directory.Exists(path))
                 {
-                    try
-                    {
+                    Process.Start("cmd.exe", $"/c {path} && attrib -r -a -s -h /d /s");
 
-                        foreach (string files in Directory.GetFiles(virusFlashPath))
-                            File.Delete(files);
-                        Directory.Delete(virusFlashPath);
-
-                    }
-                    catch (Exception)
+                    if (Directory.Exists($"{virusFlashPath}"))
                     {
-                        goto Link2;
+                        try
+                        {
+                            foreach (string files in Directory.GetFiles(virusFlashPath))
+                                File.Delete(files);
+                            Directory.Delete(virusFlashPath);
+                        }
+                        catch (Exception)
+                        {
+                            goto Link2;
+                        }
                     }
+                    else
+                    {
+                        Console.WriteLine("Папка с вирусом не найдена!");
+                    }
+
                 }
-                else 
-                { 
-                    Console.WriteLine("Папка с вирусом не найдена!");  
+                else
+                {
+                    Console.WriteLine("Диск не найден. Попробуйте ещё раз");
+                    goto Link;
                 }
-                
-            }
-            else
-            {
-                Console.WriteLine("Диск не найден. Попробуйте ещё раз");
-                goto Link;
+                GetFilesBack(path);
+
             }
         }
+       
         static void GetFilesBack(string pathToFileMove)
         {
-            DriveInfo[] info = DriveInfo.GetDrives();
-            string name = info.First(x => x.IsReady && x.DriveType == DriveType.Removable).VolumeLabel;
-            if (File.Exists(name + ".lnk"))
-                File.Delete(pathToFileMove + "\\" + name + ".lnk");
+            //string name = disks.First(x => x.IsReady && x.DriveType == DriveType.Removable).VolumeLabel; // в метод First && x.Name == $"{path}\\"
+            string name = disks.Select(x => path == x.Name.Substring(0, 2) ? x.VolumeLabel : null).SkipWhile(x => x == null).ToArray()[0];
+            Console.WriteLine(path+"\\" + $"{name}.lnk");
+            if (File.Exists($"{path}\\{name}.lnk"))
+                File.Delete(pathToFileMove + name + ".lnk");//
+            else
+            {
+                Console.WriteLine("sosi");
+            }
             try
             {
-                if (Directory.Exists($"{pathToFileMove}\\_"))
-                    Directory.Move($"{pathToFileMove}\\_", $"{pathToFileMove}\\Мои Файлы");
+                if (Directory.Exists($"{pathToFileMove}_"))
+                    Directory.Move($"{pathToFileMove}_", $"{pathToFileMove}Мои Файлы");
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
             }
+           
+           
         }
-
+       
     }
 }
