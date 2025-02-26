@@ -1,11 +1,13 @@
 ﻿
 using System;
 using System.CodeDom;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace CleanDisk
@@ -55,9 +57,8 @@ namespace CleanDisk
         }
 
 
-        static void DeletingVirus(string user = "")
-        {
-
+        static async Task DeletingVirus(string user = "")
+        { 
             Process[] procs = Process.GetProcessesByName("wscript");
             foreach (Process proc in procs)
                 if (proc.ProcessName == "wscript")
@@ -81,16 +82,21 @@ namespace CleanDisk
             }
             else
                 Console.WriteLine("На компьютере нету вируса");
-           
+            await Task.CompletedTask;
         }
 
         static void DeletingVirusFromFlash()
         {
-            string[] disk_letter = disks.Select(x => x.IsReady && x.DriveType == DriveType.Removable ? x.Name.Substring(0, 2) : null).SkipWhile(x => x == null).ToArray();
+            List<string> disk_letter = disks
+                .Select(x => x.IsReady && x.DriveType == DriveType.Removable ? x.Name.Substring(0, 2) : null)
+                .SkipWhile(x => x == null)
+                .ToList();
+            disk_letter.RemoveAll(x => x == null);
             foreach (var flash in disk_letter)
             {
             Link:
                 //Console.WriteLine("Укажите путь к флешке(пример E)");
+                
                 path = flash;//H + ":";
                 string virusFlashPath = $"{path}WindowsServices";
             Link2:
