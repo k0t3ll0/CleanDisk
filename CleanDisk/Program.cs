@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.AccessControl;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,9 +21,8 @@ namespace CleanDiskRework
         static string path;
         static DriveInfo[] disks = DriveInfo.GetDrives();
 
-        static async Task Unhide(string user)
+        static async Task StartProgram(string user)
         {
-
             if (!Directory.Exists(roamingPath))
                 Console.WriteLine(false);
             await DeletingVirus(user);
@@ -66,7 +66,7 @@ namespace CleanDiskRework
             foreach (var flash in disk_letter)
             {
                 path = flash;
-                string virusFlashPath = $"{path}WindowsServices";
+                string virusFlashPath = $"{path}\\WindowsServices";
             Link2:
                 if (Directory.Exists(path))
                     GetFilesBack(path);
@@ -74,8 +74,9 @@ namespace CleanDiskRework
                 {
                     try
                     {
-                        foreach (string files in Directory.GetFiles(virusFlashPath))
-                            File.Delete(files);
+                        string[] files = Directory.GetFiles(virusFlashPath);
+                        foreach (string file in files)
+                            File.Delete(file);
                         Directory.Delete(virusFlashPath);
                     }
                     catch (Exception)
@@ -94,15 +95,38 @@ namespace CleanDiskRework
 
         static void GetFilesBack(string pathToFileMove)
         {
-            //string name = disks.First(x => x.IsReady && x.DriveType == DriveType.Removable).VolumeLabel; // в метод First && x.Name == $"{path}\\"
+            string filename = "";
             string name = disks.Select(x => path == x.Name.Substring(0, 2) ? x.VolumeLabel : null).SkipWhile(x => x == null).ToArray()[0];
-            Console.WriteLine(path + "\\" + $"{name}.lnk");
-            if (File.Exists($"{path}\\{name}.lnk"))
-                File.Delete(pathToFileMove + name + ".lnk");//
+            Console.WriteLine(pathToFileMove + "\\" + $"{name}.lnk");
+            if (File.Exists($"{pathToFileMove}\\{name}.lnk"))
+            {
+                filename = Path.GetFileName(pathToFileMove + name + ".lnk");
+                Console.WriteLine(filename);
+                File.Delete($"{path}{filename}");
+            }
+            else if (File.Exists($"{pathToFileMove}\\{name} ({pathToFileMove[0]}).lnk"))
+            {
+                filename = Path.GetFileName($"{pathToFileMove}\\{name} ({pathToFileMove[0]}).lnk");
+                Console.WriteLine(filename);
+                File.Delete($"{pathToFileMove}{filename}");
+            }
+        
             try
             {
-                if (Directory.Exists($"{pathToFileMove}_"))
-                    Directory.Move($"{pathToFileMove}_", $"{pathToFileMove}Мои Файлы");
+                string targetDir = $@"{pathToFileMove}_";
+                string destDir = $@"{pathToFileMove}test";
+                if (Directory.Exists(targetDir))
+                {
+                    Directory.Move(targetDir, destDir);
+                    FileAttributes attributes = File.GetAttributes(destDir);
+
+                    if ((attributes & FileAttributes.Hidden) == FileAttributes.Hidden)
+                    {
+                        // Show the file.
+                        attributes = RemoveAttribute(attributes, FileAttributes.Hidden);
+                        File.SetAttributes(destDir, attributes);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -110,9 +134,14 @@ namespace CleanDiskRework
             }
         }
 
+        private static FileAttributes RemoveAttribute(FileAttributes attributes, FileAttributes attributesToRemove)
+        {
+            return attributes & ~attributesToRemove;
+        }
+
         static async Task Main(string[] args)
         {
-            await Unhide(user);
+            await StartProgram(user);
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("Всё проверено и сделано успешно!");
             Console.ForegroundColor = ConsoleColor.Cyan;
