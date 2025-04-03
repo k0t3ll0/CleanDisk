@@ -67,9 +67,9 @@ namespace CleanDiskRework
             {
                 path = flash;
                 string virusFlashPath = $"{path}\\WindowsServices";
-            Link2:
+            
                 if (Directory.Exists(path))
-                    GetFilesBack(path);
+                   await GetFilesBack(path);
                 if (Directory.Exists($"{virusFlashPath}"))
                 {
                     try
@@ -79,9 +79,10 @@ namespace CleanDiskRework
                             File.Delete(file);
                         Directory.Delete(virusFlashPath);
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        goto Link2;
+                        Console.WriteLine(ex.Message);
+                        Console.WriteLine("Перезапустите программу");
                     }
                 }
                 else
@@ -93,7 +94,7 @@ namespace CleanDiskRework
 
         }
 
-        static void GetFilesBack(string pathToFileMove)
+        static Task GetFilesBack(string pathToFileMove)
         {
             string filename = "";
             string name = disks.Select(x => path == x.Name.Substring(0, 2) ? x.VolumeLabel : null).SkipWhile(x => x == null).ToArray()[0];
@@ -132,6 +133,8 @@ namespace CleanDiskRework
             {
                 Console.WriteLine(ex);
             }
+            Thread.Sleep(1000);
+            return Task.CompletedTask;
         }
 
         private static FileAttributes RemoveAttribute(FileAttributes attributes, FileAttributes attributesToRemove)
